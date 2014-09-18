@@ -23,6 +23,7 @@ import MySQLdb
 from optparse import OptionParser
 import ConfigParser
 
+
 def parse_options():
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user", default="", help="MySQL user. Assumed to be the same for master and slaves.")
@@ -37,39 +38,42 @@ def parse_options():
     parser.add_option("", "--skip-show-slave-hosts", action="store_true", dest="skip_show_slave_hosts", help="Do not use SHOW SLAVE HOSTS to find slaves")
     return parser.parse_args()
 
+
 def verbose(message):
     print "-- %s" % message
 
+
 def print_error(message):
     print "-- ERROR: %s" % message
+
 
 def open_master_connection():
     """
     Open a connection on the master
     """
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
         config = ConfigParser.ConfigParser()
         try:
             config.read(options.defaults_file)
         except:
             pass
-        username = config.get('client','user')
-        password = config.get('client','password')
-        port_number = int(config.get('client','port'))
+        username = config.get('client', 'user')
+        password = config.get('client', 'password')
+        port_number = int(config.get('client', 'port'))
     else:
         username = options.user
         port_number = options.port
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = username,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
+            host=options.host,
+            user=username,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
     return conn, username, password, port_number
 
 
@@ -77,7 +81,8 @@ def get_master_logs():
     """
     Get the list of available binary logs on the master
     """
-    cursor = None;
+    cursor = None
+    
     try:
         cursor = master_connection.cursor()
         cursor.execute("SHOW MASTER LOGS")
@@ -95,7 +100,8 @@ def get_server_id():
     Returns the master's server id (to be later compared with listings from SHOW SLAVE HOSTS)
     """
     server_id = None
-    cursor = None;
+    cursor = None
+    
     try:
         cursor = master_connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute("SHOW GLOBAL VARIABLES LIKE 'server_id'")
@@ -113,7 +119,8 @@ def get_slave_hosts_and_ports():
     """
     found_slave_hosts_and_ports = []
 
-    cursor = None;
+    cursor = None
+    
     if not options.skip_show_slave_hosts:
         try:
             server_id = get_server_id()
@@ -121,7 +128,7 @@ def get_slave_hosts_and_ports():
             cursor.execute("SHOW SLAVE HOSTS")
             result_set = cursor.fetchall()
             # Get host,port for those slaves replicating this master
-            found_slave_hosts_and_ports = [(row["Host"], int(row["Port"]),) for row in result_set if int(row["Master_id"]) == server_id]
+            found_slave_hosts_and_ports = [(row["Host"], int(row["Port"]), ) for row in result_set if int(row["Master_id"]) == server_id]
         finally:
             if cursor:
                 cursor.close()
@@ -132,7 +139,7 @@ def get_slave_hosts_and_ports():
             cursor = master_connection.cursor(MySQLdb.cursors.DictCursor)
             cursor.execute("SHOW PROCESSLIST")
             result_set = cursor.fetchall()
-            found_slave_hosts_and_ports = [(row["Host"].split(":")[0], port_number,) for row in result_set if row["Command"].strip().lower() in ("binlog dump", "table dump")]
+            found_slave_hosts_and_ports = [(row["Host"].split(":")[0], port_number, ) for row in result_set if row["Command"].strip().lower() in ("binlog dump", "table dump")]
         finally:
             if cursor:
                 cursor.close()
@@ -144,11 +151,11 @@ def show_slaves_master_log_files():
     Get the list of master logs reported by all slaves (one master logs per found slave)
     """
     verbose("Slave host\tSlave port\tMaster_Log_File\tSeconds_Behind_Master\tStatus")
-    for (slave_host, slave_port,) in slave_hosts_and_ports:
+    for (slave_host, slave_port, ) in slave_hosts_and_ports:
         slave_connection = None
         try:
             try:
-                slave_connection = MySQLdb.connect(host = slave_host, user = username, passwd = password, port = slave_port)
+                slave_connection = MySQLdb.connect(host=slave_host, user=username, passwd=password, port=slave_port)
                 slave_cursor = slave_connection.cursor(MySQLdb.cursors.DictCursor)
                 slave_cursor.execute("SHOW SLAVE STATUS")
                 slave_status = slave_cursor.fetchone()
@@ -163,7 +170,7 @@ def show_slaves_master_log_files():
                     status = "Far behind"
                 verbose("%s\t%d\t%s\t%s\t%s" % (slave_host, slave_port, slave_master_log_file, seconds_behind_master, status))
             except:
-                print_error("Cannot SHOW SLAVE STATUS on %s:%d" % (slave_host, slave_port,))
+                print_error("Cannot SHOW SLAVE STATUS on %s:%d" % (slave_host, slave_port, ))
         finally:
             if slave_connection:
                 slave_connection.close()

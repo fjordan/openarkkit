@@ -22,6 +22,7 @@ import MySQLdb
 import sys
 from optparse import OptionParser
 
+
 def parse_options():
     usage = "usage: oak-get-slave-lag [options]"
     parser = OptionParser(usage=usage)
@@ -41,25 +42,28 @@ def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     sys.stderr.write("-- ERROR: %s\n" % message)
+
 
 def open_connection():
     if options.defaults_file:
         conn = MySQLdb.connect(
-            read_default_file = options.defaults_file)
+            read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
 
 
 def act_query(query):
@@ -111,12 +115,13 @@ def get_slave_lag():
             print seconds_behind_master
         elif seconds_behind_master is None or seconds_behind_master > options.error_if_more_than_seconds:
             exit_with_error(seconds_behind_master)
-        else:    
+        else:
             print seconds_behind_master
     except Exception, err:
         if options.debug:
             traceback.print_exc()
         print err
+
 
 def exit_with_error(error_message):
     """

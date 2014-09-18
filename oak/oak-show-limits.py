@@ -21,6 +21,7 @@ import getpass
 import MySQLdb
 from optparse import OptionParser
 
+
 def parse_options():
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user", default="", help="MySQL user")
@@ -36,27 +37,32 @@ def parse_options():
     parser.add_option("-l", "--threshold", dest="ratio_threshold", type="float", default="0", help="Only show ratios larger than given threshold in range [0..1)")
     return parser.parse_args()
 
+
 def verbose(message):
     print "-- %s" % message
+
 
 def print_error(message):
     print "-- ERROR: %s" % message
 
+
 def open_connection():
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
+
 
 def show_limits(conn):
     cursor = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -73,7 +79,7 @@ def show_limits(conn):
         table_name = row['TABLE_NAME']
         column_name = row['COLUMN_NAME']
         data_type = row['DATA_TYPE']
-        data_type_max_value = max_values[ data_type ]
+        data_type_max_value = max_values[data_type]
         if not 'unsigned' in row['COLUMN_TYPE']:
             # This is a signed int value
             data_type_max_value = data_type_max_value // 2
@@ -86,9 +92,9 @@ def show_limits(conn):
             value_cursor.close()
             if max_value:
                 # It's None when there are no rows...
-                ratio = float(max_value)/data_type_max_value
+                ratio = float(max_value) / data_type_max_value
                 if ratio >= options.ratio_threshold:
-                    print "%s.%s.%s:\t%d/%d\t%f" % (schema_name, table_name, column_name, max_value, data_type_max_value , ratio)
+                    print "%s.%s.%s:\t%d/%d\t%f" % (schema_name, table_name, column_name, max_value, data_type_max_value, ratio)
         except Exception, err:
             print_error("Error reading %s.%s.%s" % (schema_name, table_name, column_name))
             print err
@@ -97,11 +103,11 @@ def show_limits(conn):
 
 try:
     max_values = {}
-    max_values['tinyint'] = 2**8
-    max_values['smallint'] = 2**16
-    max_values['mediumint'] = 2**24
-    max_values['int'] = 2**32
-    max_values['bigint'] = 2**64
+    max_values['tinyint'] = 2 ** 8
+    max_values['smallint'] = 2 ** 16
+    max_values['mediumint'] = 2 ** 24
+    max_values['int'] = 2 ** 32
+    max_values['bigint'] = 2 ** 64
     try:
         conn = None
         (options, args) = parse_options()

@@ -23,6 +23,7 @@ import MySQLdb
 from optparse import OptionParser
 import ConfigParser
 
+
 def parse_options():
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user", default="", help="MySQL user")
@@ -40,30 +41,35 @@ def parse_options():
     parser.add_option("--print-only", action="store_true", dest="print_only", help="Do not execute. Only print statement")
     return parser.parse_args()
 
+
 def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     print "-- ERROR: %s" % message
 
+
 def open_connection():
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
 
-def act_final_query(query):        
+
+def act_final_query(query):
     """
     Either print or execute the given query
     """
@@ -80,12 +86,14 @@ def act_final_query(query):
         finally:
             update_cursor.close()
 
+
 def get_slow_processes_ids():
     """
     Return the list of process ids where queries are slow
     """
     slow_processes_ids = []
-    cursor = None;
+    cursor = None
+    
     try:
         cursor = conn.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute("SHOW PROCESSLIST")
@@ -118,13 +126,14 @@ def get_slow_processes_ids():
             cursor.close()
     return slow_processes_ids
 
+
 def kill_slow_queries(conn):
     slow_processes_ids = get_slow_processes_ids()
     verbose("Found %s slow queries" % len(slow_processes_ids))
     for process_id in slow_processes_ids:
         cursor = conn.cursor()
         query = "KILL QUERY %d" % process_id
-        
+
         act_final_query(query)
 
 try:

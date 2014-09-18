@@ -35,28 +35,33 @@ def parse_options():
     parser.add_option("--verbose", action="store_true", dest="verbose", help="Print user firendly messages")
     return parser.parse_args()
 
+
 def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     print "-- ERROR: %s" % message
 
+
 def open_connection():
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
+
 
 def build_query(row):
     column_type = row['COLUMN_TYPE']
@@ -72,6 +77,7 @@ def build_query(row):
         query += " DEFAULT '%s'" % column_default
     return query
 
+
 def alter_column(conn):
     cursor = conn.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='%s' AND TABLE_NAME='%s' AND COLUMN_NAME='%s'" % (schema_name, table_name, column_name))
@@ -83,7 +89,7 @@ def alter_column(conn):
         return
     query = build_query(row)
     if options.print_only:
-        print query+";"
+        print query + ";"
     else:
         alter_cursor = conn.cursor()
         try:

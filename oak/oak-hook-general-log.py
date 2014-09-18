@@ -25,6 +25,7 @@ import traceback
 import warnings
 from optparse import OptionParser
 
+
 def parse_options():
     usage = "usage: oak-hook-general-log [options]"
     parser = OptionParser(usage=usage)
@@ -60,25 +61,29 @@ def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     sys.stderr.write("-- ERROR: %s\n" % message)
+
 
 def open_connection():
     if options.defaults_file:
         conn = MySQLdb.connect(
-            read_default_file = options.defaults_file)
+            read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
+
 
 def act_query(query):
     """
@@ -159,7 +164,7 @@ def explain_plan_rows_exceed(query, database, num_rows):
         return False
 
     for explain_row in explain_plan:
-        explain_rows_value = int(explain_row["rows"]) 
+        explain_rows_value = int(explain_row["rows"])
         if explain_rows_value > num_rows:
             return True
     return False
@@ -174,7 +179,7 @@ def explain_plan_total_rows_exceed(query, database, num_rows):
     for explain_row in explain_plan:
         explain_rows_value = int(explain_row["rows"])
         total_rows_value = total_rows_value * explain_rows_value
-         
+
     if total_rows_value > num_rows:
         return True
     return False
@@ -191,17 +196,19 @@ def get_database_per_connection_map():
         connection_id = row["Id"]
         database = row["db"]
         database_per_connection_map[connection_id] = database
-    return database_per_connection_map 
-    
+    return database_per_connection_map
+
 
 def get_global_variable(variable_name):
-    row = get_row("SHOW GLOBAL VARIABLES LIKE '%s'" % variable_name);
+    row = get_row("SHOW GLOBAL VARIABLES LIKE '%s'" % variable_name)
+    
     value = row["Value"]
     return value
 
 
 def get_table_engine(database_name, table_name):
-    row = get_row("SHOW TABLE STATUS FROM %s LIKE '%s'" % (database_name, table_name,));
+    row = get_row("SHOW TABLE STATUS FROM %s LIKE '%s'" % (database_name, table_name, ))
+    
     engine = row["Engine"].lower()
     return engine
 
@@ -214,10 +221,11 @@ def get_log_output():
 def get_restore_statement():
     return "SET @@global.general_log='%s', @@global.log_output='%s';" % (general_log_original_setting, log_output_original_setting)
 
+
 def store_original_log_settings():
     global general_log_original_setting
     global log_output_original_setting
-    
+
     general_log_original_setting = get_global_variable("general_log")
     log_output_original_setting = get_global_variable("log_output")
     verbose("Stored original settings. To recover original settings in case of a problem, issue:")
@@ -228,9 +236,10 @@ def restore_original_log_settings():
     act_query(get_restore_statement())
     verbose("Restored original settings")
 
+
 def enable_general_log_table_output():
     global originally_used_log_tables
-    
+
     act_query("SET @@session.sql_log_off=1")
     act_query("SET @@global.general_log='ON'")
     log_output = get_log_output()
@@ -244,36 +253,36 @@ def enable_general_log_table_output():
     verbose("log_output is now %s" % get_log_output())
 
 
-def get_inactive_shadow_table():    
-    for table in shadow_tables:  
+def get_inactive_shadow_table():
+    for table in shadow_tables:
         if table != active_shadow_table:
             return table
     # Impossible to get here
     return None
 
     
-def drop_shadow_tables():  
-    for table in shadow_tables:  
-        act_query("DROP TABLE IF EXISTS mysql.%s" % table)    
+def drop_shadow_tables():
+    for table in shadow_tables:
+        act_query("DROP TABLE IF EXISTS mysql.%s" % table)
 
 
 def create_shadow_table():
-    act_query("CREATE TABLE mysql.%s LIKE mysql.general_log" % active_shadow_table)    
+    act_query("CREATE TABLE mysql.%s LIKE mysql.general_log" % active_shadow_table)
     verbose("%s table created" % active_shadow_table)
 
 
 def cleanup_active_shadow_table():
-    act_query("TRUNCATE TABLE mysql.%s" % active_shadow_table)    
+    act_query("TRUNCATE TABLE mysql.%s" % active_shadow_table)
     verbose("%s table truncated" % active_shadow_table)
 
 
 def rotate_general_log_table():
     global active_shadow_table
     global num_rotates
-    
+
     cleanup_active_shadow_table()
     act_query("RENAME TABLE mysql.general_log TO mysql.%s, mysql.%s TO mysql.general_log" % (get_inactive_shadow_table(), active_shadow_table))
-    active_shadow_table = get_inactive_shadow_table()    
+    active_shadow_table = get_inactive_shadow_table()
     if num_rotates == 0 and not options.include_existing:
         cleanup_active_shadow_table()
     num_rotates = num_rotates + 1
@@ -289,7 +298,7 @@ def truncate_slow_log_table():
     """
     query = "TRUNCATE mysql.slow_log"
     act_query(query)
-    
+
 
 def dump_general_log_snapshot():
     global cached_explain_plan
@@ -303,7 +312,7 @@ def dump_general_log_snapshot():
         server_id = row["server_id"]
         command_type = row["command_type"]
         argument = row["argument"]
-        
+
         database = None
         if database_per_connection_map.has_key(thread_id):
             database = database_per_connection_map[thread_id]
@@ -322,8 +331,8 @@ def dump_general_log_snapshot():
             if len(filter_explain_key_tokens) == 1:
                 should_print = explain_plan_contains(argument, database, "key", filter_explain_key_tokens[0])
             elif len(filter_explain_key_tokens) == 2:
-                should_print = (explain_plan_contains(argument, database, "table", filter_explain_key_tokens[0]) 
-                    and explain_plan_contains(argument, database, "key", filter_explain_key_tokens[1])) 
+                should_print = (explain_plan_contains(argument, database, "table", filter_explain_key_tokens[0])
+                    and explain_plan_contains(argument, database, "key", filter_explain_key_tokens[1]))
             else:
                 exit_with_error("unrecognized filter_explain_key format")
         if options.filter_explain_table and should_print:
@@ -346,11 +355,11 @@ def dump_general_log_snapshot():
             should_print = (command_type in ["Query", "Execute"])
         if options.filter_connection and should_print:
             should_print = (command_type in ["Connect", "Quit"])
-            
+
         if should_print:
             print "%s\t%s\t%s\t%s\t%s\t%s" % (event_time, user_host, thread_id, server_id, command_type, argument)
             sys.stdout.flush()
-        
+
 
 def hook_general_log():
     start_time = time.time()
@@ -359,7 +368,7 @@ def hook_general_log():
     drop_shadow_tables()
     create_shadow_table()
     try:
-        while time.time() - start_time < options.timeout_minutes*60:
+        while time.time() - start_time < options.timeout_minutes * 60:
             try:
                 rotate_general_log_table()
                 if not originally_used_log_tables:
@@ -375,7 +384,7 @@ def hook_general_log():
         pass
     except:
         pass
-        
+
     drop_shadow_tables()
     restore_original_log_settings()
 
@@ -389,7 +398,7 @@ def exit_with_error(error_message):
         restore_original_log_settings()
     except:
         pass
-        
+
     print_error(error_message)
     exit(1)
 
@@ -400,19 +409,19 @@ try:
         reuse_conn = True
         (options, args) = parse_options()
 
-        warnings.simplefilter("ignore", MySQLdb.Warning) 
+        warnings.simplefilter("ignore", MySQLdb.Warning)
         conn = open_connection()
-        
+
         shadow_tables = ["general_log_shadow_0", "general_log_shadow_1"]
         active_shadow_table = shadow_tables[0]
         num_rotates = 0
         originally_used_log_tables = False
         database_per_connection_map = {}
-        
+
         general_log_original_setting = None
         log_output_original_setting = None
         cached_explain_plan = None
-        
+
         hook_general_log()
     except Exception, err:
         if options.debug:

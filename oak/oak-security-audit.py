@@ -44,11 +44,11 @@ def verbose(message):
 def verbose_topic(message):
     verbose("")
     verbose(message)
-    verbose("-"*len(message))
+    verbose("-" * len(message))
 
 
 def recommend(message):
-    verbose(message+". Recommended actions:")
+    verbose(message + ". Recommended actions:")
 
 
 def verbose_passed():
@@ -60,10 +60,12 @@ def print_error(message):
 
 
 def get_in_query(list):
-    return "(" + ", ".join([ "'%s'" % item for item in list ]) + ")"
+    return "(" + ", ".join(["'%s'" % item for item in list]) + ")"
+
 
 def get_root_users_in_query():
     return get_in_query(root_users)
+
 
 def grantee_is_root(grantee):
     grantee_user = grantee.split("@")[0]
@@ -71,24 +73,27 @@ def grantee_is_root(grantee):
         grantee_user = grantee_user[1:-1]
     return grantee_user in root_users
 
+
 def is_strict():
     return options.audit_level == "strict"
 
+
 def open_connection():
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
 
 
 def audit_root_user(conn):
@@ -101,7 +106,7 @@ def audit_root_user(conn):
         for row in rows:
             try:
                 user, host = row["user"], row["host"]
-                query = "RENAME USER '%s'@'%s' TO '%s'@'localhost';" % (user, host, user,)
+                query = "RENAME USER '%s'@'%s' TO '%s'@'localhost';" % (user, host, user, )
                 #query = "DROP USER '%s'@'%s';" % (user, host,)
                 print query
             except:
@@ -109,6 +114,7 @@ def audit_root_user(conn):
     else:
         verbose_passed()
     cursor.close()
+
 
 def audit_anonymous_user(conn):
     verbose_topic("Looking for anonymous user accounts")
@@ -120,13 +126,14 @@ def audit_anonymous_user(conn):
         for row in rows:
             try:
                 user, host = row["user"], row["host"]
-                query = "DROP USER '%s'@'%s';" % (user, host,)
+                query = "DROP USER '%s'@'%s';" % (user, host, )
                 print query
             except:
                 print_error("-- Cannot %s" % query)
     else:
         verbose_passed()
     cursor.close()
+
 
 def audit_any_host(conn):
     verbose_topic("Looking for accounts accessible from any host")
@@ -138,13 +145,14 @@ def audit_any_host(conn):
         for row in rows:
             try:
                 user, host = row["user"], row["host"]
-                query = "RENAME USER '%s'@'%s' TO '%s'@'<specific host>';" % (user, host, user,)
+                query = "RENAME USER '%s'@'%s' TO '%s'@'<specific host>';" % (user, host, user, )
                 print query
             except:
                 print_error("-- Cannot %s" % query)
     else:
         verbose_passed()
     cursor.close()
+
 
 def audit_empty_passwords_accounts(conn):
     verbose_topic("Looking for accounts with empty passwords")
@@ -165,6 +173,7 @@ def audit_empty_passwords_accounts(conn):
     else:
         verbose_passed()
     cursor.close()
+
 
 def audit_identical_passwords_accounts(conn):
     verbose_topic("Looking for accounts with identical (non empty) passwords")
@@ -196,22 +205,22 @@ def audit_all_privileges(conn):
         try:
             user, host = row["user"], row["host"]
 
-            query = "SHOW GRANTS FOR '%s'@'%s'" % (user, host,)
+            query = "SHOW GRANTS FOR '%s'@'%s'" % (user, host, )
             grant_cursor = conn.cursor()
             grant_cursor.execute(query)
             grants = grant_cursor.fetchall()
 
             for grant in [grantrow[0] for grantrow in grants]:
                 if grant.startswith("GRANT ALL PRIVILEGES ON *.* TO") and not user in get_root_users_in_query():
-                    query = "GRANT <specific privileges> ON *.* TO '%s'@'%s';" % (user, host,)
-                    permissive_privileges.append((user,host,query,))
+                    query = "GRANT <specific privileges> ON *.* TO '%s'@'%s';" % (user, host, )
+                    permissive_privileges.append((user, host, query, ))
             grant_cursor.close()
 
         except:
             print "-- Cannot %s" % query
     if permissive_privileges:
         verbose("There are %d non root accounts with all privileges" % len(permissive_privileges))
-        for (user,host,query) in permissive_privileges:
+        for (user, host, query) in permissive_privileges:
             print query
     else:
         verbose_passed()
@@ -271,16 +280,16 @@ def audit_db_ddl_privileges(conn):
 
     suspicious_grantees = []
     for row in cursor.fetchall():
-        grantee, schema = (row["GRANTEE"], row["TABLE_SCHEMA"],)
+        grantee, schema = (row["GRANTEE"], row["TABLE_SCHEMA"], )
         if not grantee_is_root(grantee):
-            suspicious_grantees.append((grantee, schema,))
+            suspicious_grantees.append((grantee, schema, ))
 
     if suspicious_grantees:
         verbose("There are %d non-root accounts with schema data definition privileges" % len(suspicious_grantees))
         verbose("These accounts can drop or alter tables in those schemas, or drop the schema itself.")
         recommend("data definition privileges are: %s" % ", ".join(privileges_ddl))
         for grantee, schema in suspicious_grantees:
-            query = 'GRANT <non-data-definition-privileges> ON "%s".* TO %s;' % (schema, grantee,)
+            query = 'GRANT <non-data-definition-privileges> ON "%s".* TO %s;' % (schema, grantee, )
             print query
     else:
         verbose_passed()
@@ -314,22 +323,22 @@ def audit_global_dml_privileges(conn):
 def audit_mysql_privileges(conn):
     verbose_topic("Looking for (non-root) accounts with write privileges on the mysql schema")
     cursor = conn.cursor(MySQLdb.cursors.DictCursor)
-    query = "SELECT GRANTEE, GROUP_CONCAT(PRIVILEGE_TYPE) AS privileges, TABLE_SCHEMA FROM information_schema.SCHEMA_PRIVILEGES WHERE TABLE_SCHEMA='mysql' AND PRIVILEGE_TYPE IN %s GROUP BY GRANTEE" % get_in_query(privileges_ddl+privileges_dml)
+    query = "SELECT GRANTEE, GROUP_CONCAT(PRIVILEGE_TYPE) AS privileges, TABLE_SCHEMA FROM information_schema.SCHEMA_PRIVILEGES WHERE TABLE_SCHEMA='mysql' AND PRIVILEGE_TYPE IN %s GROUP BY GRANTEE" % get_in_query(privileges_ddl + privileges_dml)
     cursor.execute(query)
 
     suspicious_grantees = []
     for row in cursor.fetchall():
-        grantee, privileges = (row["GRANTEE"], row["privileges"],)
-        write_privileges = [privilege for privilege in privileges.split(",") if privilege in privileges_ddl+privileges_dml]
+        grantee, privileges = (row["GRANTEE"], row["privileges"], )
+        write_privileges = [privilege for privilege in privileges.split(",") if privilege in privileges_ddl + privileges_dml]
         if not grantee_is_root(grantee):
-            suspicious_grantees.append((grantee, write_privileges,))
+            suspicious_grantees.append((grantee, write_privileges, ))
 
     if suspicious_grantees:
         verbose("There are %d non-root accounts with write privileges on the mysql schema" % len(suspicious_grantees))
         verbose("These accounts can drop or alter tables in those schemas, or drop the schema itself.")
         recommend("data definition privileges are: %s" % ", ".join(privileges_ddl))
         for grantee, write_privileges in suspicious_grantees:
-            query = 'REVOKE %s ON "mysql".* FROM %s;' % (",".join(write_privileges), grantee,)
+            query = 'REVOKE %s ON "mysql".* FROM %s;' % (",".join(write_privileges), grantee, )
             print query
     else:
         verbose_passed()
@@ -350,9 +359,10 @@ def audit_sql_mode(conn):
         recommend("sql_mode does not contain %s" % NO_AUTO_CREATE_USER)
         desired_sql_mode = NO_AUTO_CREATE_USER
         if sql_mode:
-            desired_sql_mode += ","+sql_mode
+            desired_sql_mode += "," + sql_mode
         query = "SET GLOBAL sql_mode = '%s';" % desired_sql_mode
         print query
+
 
 def audit_old_passwords(conn):
     verbose_topic("Checking old_passwords setting")
@@ -367,6 +377,7 @@ def audit_old_passwords(conn):
         verbose_passed()
     cursor.close()
 
+
 def audit_skip_networking(conn):
     verbose_topic("Checking networking")
     cursor = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -380,6 +391,7 @@ def audit_skip_networking(conn):
         verbose("Networking is disabled")
 
     cursor.close()
+
 
 def audit_test_database(conn):
     verbose_topic("Checking for `test` database existance")

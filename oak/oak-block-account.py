@@ -24,6 +24,7 @@ import sys
 import traceback
 from optparse import OptionParser
 
+
 def parse_options():
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user", default="", help="MySQL user")
@@ -45,13 +46,14 @@ def parse_options():
     return parser.parse_args()
 
 
-
 def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     sys.stderr.write("-- ERROR: %s\n" % message)
+
 
 def open_connection():
     if options.defaults_file:
@@ -68,7 +70,9 @@ def open_connection():
             passwd=password,
             port=options.port,
             unix_socket=options.socket)
-    return conn;
+    return conn
+    
+
 
 def act_query(query):
     """
@@ -151,7 +155,8 @@ def is_blocked_password(password):
     if password == blocked_empty_password:
         return True
     if password.startswith(blocked_old_password_prefix):
-        return True;
+        return True
+        
     if blocked_new_passoword_regexp.match(password):
         return True
     return False
@@ -191,8 +196,6 @@ def released_password(password):
     return None
 
 
-
-
 def get_listing_query():
     query = "SELECT user, host, password FROM mysql.user"
     if options.account_user:
@@ -213,7 +216,7 @@ def block_account():
             host = row['host']
             password = row['password']
             new_password = None
-            account = "'%s'@'%s'" % (user, host,)
+            account = "'%s'@'%s'" % (user, host, )
 
             if is_empty_password(password):
                 verbose("password for '%s'@'%s' is empty" % (user, host))
@@ -243,7 +246,6 @@ def block_account():
             print_error("Cannot change password for %s: %s" % (account, err))
 
 
-
 def list_accounts():
     verbose("Listing accounts blocked status")
 
@@ -251,7 +253,7 @@ def list_accounts():
         user = row['user']
         host = row['host']
         password = row['password']
-        account = "'%s'@'%s'" % (user, host,)
+        account = "'%s'@'%s'" % (user, host, )
 
          
         if is_blocked_password(password):

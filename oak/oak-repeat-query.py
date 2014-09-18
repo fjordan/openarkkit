@@ -29,6 +29,7 @@ import traceback
 import warnings
 from optparse import OptionParser
 
+
 def parse_options():
     usage = "usage: oak-repeat-query [options]"
     parser = OptionParser(usage=usage)
@@ -54,27 +55,31 @@ def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     sys.stderr.write("-- ERROR: %s\n" % message)
+
 
 def open_connection():
     if options.defaults_file:
         conn = MySQLdb.connect(
-            read_default_file = options.defaults_file,
-            db = database_name)
+            read_default_file=options.defaults_file,
+            db=database_name)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            db = database_name,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            db=database_name,
+            unix_socket=options.socket)
+    return conn
+    
+
 
 def act_query(query):
     """
@@ -111,7 +116,8 @@ def get_rows(query):
 def repeat_query():
     start_time = time.time()
     num_iterations = 0
-    accumulated_work_time = 0;
+    accumulated_work_time = 0
+    
     try:
         while True:
             verbose("Executing query; comment: %s" % query_comment)
@@ -125,9 +131,9 @@ def repeat_query():
             elapsed_seconds = round(time_now - start_time, 1)
 
             num_iterations += 1
-            
+
             verbose("+ Affected rows: %d; iterations complete: %d; seconds: %s elapsed, %s executed" % (num_affected_rows, num_iterations, elapsed_seconds, round(accumulated_work_time, 2)))
-                
+
             if options.max_iterations is not None:
                 if num_iterations >= options.max_iterations:
                     verbose("Max iterations (%d) reached. Terminating." % options.max_iterations)
@@ -137,14 +143,14 @@ def repeat_query():
                     verbose("Max seconds (%d) reached. Terminating." % options.max_seconds)
                     return
             if options.max_iterations is None and options.max_seconds is None:
-                # No explicit limitation set. Implicit limitation is no affected rows. 
+                # No explicit limitation set. Implicit limitation is no affected rows.
                 if not num_affected_rows:
                     verbose("Terminating due to no rows affected")
                     return
-                
+
             sleep_seconds = None
             if options.sleep_time:
-                sleep_seconds = options.sleep_time/1000.0
+                sleep_seconds = options.sleep_time / 1000.0
             elif options.sleep_ratio > 0:
                 sleep_seconds = options.sleep_ratio * query_execution_time
             if sleep_seconds:
@@ -171,7 +177,7 @@ try:
 
         database_name = None
         if options.database:
-            database_name=options.database
+            database_name = options.database
 
         if not options.execute_query:
             exit_with_error("No query defined (use --execute)")
@@ -181,13 +187,13 @@ try:
         query_comment = None
         if query_comment_match:
             query_comment = query_comment_match.group(1).strip()
-            
+
         if not options.database:
             exit_with_error("No database specified (use --database)")
-            
-        warnings.simplefilter("ignore", MySQLdb.Warning) 
+
+        warnings.simplefilter("ignore", MySQLdb.Warning)
         conn = open_connection()
-                
+
         repeat_query()
     except Exception, err:
         if options.debug:

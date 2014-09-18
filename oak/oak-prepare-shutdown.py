@@ -24,6 +24,7 @@ import time
 import traceback
 from optparse import OptionParser
 
+
 def parse_options():
     usage = "usage: oak-prepare-shutdown [options]"
     parser = OptionParser(usage=usage)
@@ -43,25 +44,29 @@ def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     sys.stderr.write("-- ERROR: %s\n" % message)
+
 
 def open_connection():
     if options.defaults_file:
         conn = MySQLdb.connect(
-            read_default_file = options.defaults_file)
+            read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
+
 
 def act_query(query):
     """
@@ -96,7 +101,8 @@ def get_rows(query):
 
 
 def get_status_variable(variable_name):
-    row = get_row("SHOW GLOBAL STATUS LIKE '%s'" % variable_name);
+    row = get_row("SHOW GLOBAL STATUS LIKE '%s'" % variable_name)
+    
     value = row["Value"]
     return value
 
@@ -104,15 +110,19 @@ def get_status_variable(variable_name):
 def stop_slave():
     act_query("STOP SLAVE")
 
+
 def start_slave():
     act_query("START SLAVE")
+
 
 def slave_is_running():
     slave_status = get_row("SHOW SLAVE STATUS")
     return slave_status is not None
 
+
 def get_slave_open_temp_tables():
     return int(get_status_variable("Slave_open_temp_tables"))
+
 
 def get_innodb_buffer_pool_pages_dirty():
     return int(get_status_variable("Innodb_buffer_pool_pages_dirty"))
@@ -124,7 +134,8 @@ def set_innodb_max_dirty_pages_pct(value):
 
 
 def get_global_variable(variable_name):
-    row = get_row("SHOW GLOBAL VARIABLES LIKE '%s'" % variable_name);
+    row = get_row("SHOW GLOBAL VARIABLES LIKE '%s'" % variable_name)
+    
     value = row["Value"]
     return value
 
@@ -142,7 +153,7 @@ def prepare_shutdown():
             start_slave()
             verbose("Slave stopped, but there were %d slave_open_temp_tables. Slave started; will try again" % slave_open_temp_tables)
             time.sleep(1)
-            
+
     original_innodb_max_dirty_pages_pct = int(get_global_variable("innodb_max_dirty_pages_pct"))
 
     num_succesive_non_improvements = 0
@@ -151,7 +162,7 @@ def prepare_shutdown():
     verbose("innodb_buffer_pool_pages_dirty: %d" % min_innodb_buffer_pool_pages_dirty)
     set_innodb_max_dirty_pages_pct(0)
     try:
-        # Iterate until no improvement is made for max_succesive_non_improvements seconds, 
+        # Iterate until no improvement is made for max_succesive_non_improvements seconds,
         # or until the number of dirty pages reaches 0, which is optimal.
         while (num_succesive_non_improvements < max_succesive_non_improvements) and (min_innodb_buffer_pool_pages_dirty > 0):
             time.sleep(1)

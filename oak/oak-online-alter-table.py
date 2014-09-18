@@ -24,6 +24,7 @@ import re
 import sys
 from optparse import OptionParser
 
+
 def parse_options():
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user", default="", help="MySQL user")
@@ -49,30 +50,34 @@ def parse_options():
     parser.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Quiet mode, do not verbose")
     return parser.parse_args()
 
+
 def verbose(message):
     if options.verbose:
         print "-- %s" % message
 
+
 def print_error(message):
     sys.stderr.write("-- ERROR: %s\n" % message)
+
 
 def open_connection():
     verbose("Connecting to MySQL")
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            db = database_name,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            db=database_name,
+            unix_socket=options.socket)
+    return conn
+    
 
 
 def act_query(query):
@@ -372,7 +377,7 @@ def get_shared_columns():
     """
     original_columns = get_table_columns(original_table_name)
     ghost_columns = get_table_columns(ghost_table_name)
-    shared_columns  = original_columns.intersection(ghost_columns)
+    shared_columns = original_columns.intersection(ghost_columns)
     verbose("Shared columns: %s" % ", ".join(shared_columns))
 
     return shared_columns
@@ -432,8 +437,8 @@ def create_custom_triggers():
     shared_columns_listing = ", ".join(["`%s`" % shared_column for shared_column in shared_columns])
     shared_columns_new_listing = ", ".join(["NEW.`%s`" % column_name for column_name in shared_columns])
 
-    # Reason for the DELETE in the AFTER UPDATE trigger is that the UPDATE query may 
-    # modify the columns used by the chunking index itself, in which case the REPLACE does not 
+    # Reason for the DELETE in the AFTER UPDATE trigger is that the UPDATE query may
+    # modify the columns used by the chunking index itself, in which case the REPLACE does not
     # remove the row from the ghost table.
     query = """
         CREATE TRIGGER %s.%s AFTER UPDATE ON %s.%s
@@ -498,16 +503,20 @@ def drop_custom_triggers():
 
 
 def get_unique_key_min_values_variables():
-    return ",".join(["@unique_key_min_value_%d" % i for i in range(0,count_columns_in_unique_key)])
+    return ",".join(["@unique_key_min_value_%d" % i for i in range(0, count_columns_in_unique_key)])
+
 
 def get_unique_key_max_values_variables():
-    return ",".join(["@unique_key_max_value_%d" % i for i in range(0,count_columns_in_unique_key)])
+    return ",".join(["@unique_key_max_value_%d" % i for i in range(0, count_columns_in_unique_key)])
+
 
 def get_unique_key_range_start_variables():
-    return ",".join(["@unique_key_range_start_%d" % i for i in range(0,count_columns_in_unique_key)])
+    return ",".join(["@unique_key_range_start_%d" % i for i in range(0, count_columns_in_unique_key)])
+
 
 def get_unique_key_range_end_variables():
-    return ",".join(["@unique_key_range_end_%d" % i for i in range(0,count_columns_in_unique_key)])
+    return ",".join(["@unique_key_range_end_%d" % i for i in range(0, count_columns_in_unique_key)])
+
 
 def get_unique_key_range():
     """
@@ -546,8 +555,8 @@ def get_unique_key_range():
         """ % (database_name, original_table_name)
     act_query(query)
 
-    unique_key_min_values = [get_session_variable_value("unique_key_min_value_%d" % i) for i in range(0,count_columns_in_unique_key)]
-    unique_key_max_values = [get_session_variable_value("unique_key_max_value_%d" % i) for i in range(0,count_columns_in_unique_key)]
+    unique_key_min_values = [get_session_variable_value("unique_key_min_value_%d" % i) for i in range(0, count_columns_in_unique_key)]
+    unique_key_max_values = [get_session_variable_value("unique_key_max_value_%d" % i) for i in range(0, count_columns_in_unique_key)]
     range_exists = int(get_session_variable_value("range_exists"))
     verbose("%s (min, max) values: (%s, %s)" % (unique_key_column_names, unique_key_min_values, unique_key_max_values))
 
@@ -589,7 +598,7 @@ def get_multiple_columns_non_equality_comparison(columns, values, comparison_sig
     properly with this form of condition, hence the splitting into multiple conditions.
     """
     comparisons = []
-    for i in range(0,len(columns)):
+    for i in range(0, len(columns)):
         equalities_comparison = get_multiple_columns_equality(columns[0:i], values[0:i])
         range_comparison = get_value_comparison(columns[i], values[i], comparison_sign)
         if equalities_comparison:
@@ -687,7 +696,7 @@ def get_eta_seconds(elapsed_times, ratio_complete):
     if r1 == r0:
         return 0
 
-    estimated_total_time = e0 + (1.0 - r0)*(e1 - e0)/(r1 - r0)
+    estimated_total_time = e0 + (1.0 - r0) * (e1 - e0) / (r1 - r0)
     eta_seconds = estimated_total_time - elapsed_time
     return eta_seconds
 
@@ -695,15 +704,15 @@ def get_eta_seconds(elapsed_times, ratio_complete):
 def get_eta_presentation(eta_seconds, data_valid):
     if not data_valid:
         return "N/A"
-    eta_seconds = round(eta_seconds+0.5)
-    hours = eta_seconds / (60*60)
+    eta_seconds = round(eta_seconds + 0.5)
+    hours = eta_seconds / (60 * 60)
     minutes = (eta_seconds / 60) % 60
     seconds = eta_seconds % 60
     return "%02d:%02d:%02d" % (hours, minutes, seconds)
 
 
 def get_progress_and_eta_presentation(elapsed_times, elapsed_time, ratio_complete):
-    elapsed_times.append((elapsed_time, ratio_complete,))
+    elapsed_times.append((elapsed_time, ratio_complete, ))
     elapsed_times = elapsed_times[-5:]
     progress = int(100.0 * ratio_complete)
     #eta_seconds = get_eta_seconds(elapsed_times, ratio_complete)
@@ -718,7 +727,7 @@ def to_string_list(list):
 def sleep_after_chunk(query_execution_time):
     sleep_seconds = None
     if options.sleep_millis > 0:
-        sleep_seconds = options.sleep_millis/1000.0
+        sleep_seconds = options.sleep_millis / 1000.0
     elif options.sleep_ratio > 0:
         sleep_seconds = options.sleep_ratio * query_execution_time
     if sleep_seconds:
@@ -752,11 +761,11 @@ def act_data_pass(first_data_pass_query, rest_data_pass_query, description):
         set_unique_key_range_end(first_round)
         first_round = False
 
-        unique_key_range_start_values = [get_session_variable_value("unique_key_range_start_%d" % i) for i in range(0,count_columns_in_unique_key)]
-        unique_key_range_end_values = [get_session_variable_value("unique_key_range_end_%d" % i) for i in range(0,count_columns_in_unique_key)]
+        unique_key_range_start_values = [get_session_variable_value("unique_key_range_start_%d" % i) for i in range(0, count_columns_in_unique_key)]
+        unique_key_range_end_values = [get_session_variable_value("unique_key_range_end_%d" % i) for i in range(0, count_columns_in_unique_key)]
 
         if total_num_attempts % 20 == 0:
-            verbose("- Reminder: altering %s.%s: %s..." % (database_name, original_table_name, options.alter_statement[0:30])) 
+            verbose("- Reminder: altering %s.%s: %s..." % (database_name, original_table_name, options.alter_statement[0:30]))
         if unique_key_type == "integer":
             ratio_complete_query = """
                 SELECT
@@ -780,7 +789,7 @@ def act_data_pass(first_data_pass_query, rest_data_pass_query, description):
 
         if options.lock_chunks:
             lock_tables_read()
-            
+
         retry_data_pass = True
         num_attempts = 0
         query_execution_time = 0
@@ -806,7 +815,7 @@ def act_data_pass(first_data_pass_query, rest_data_pass_query, description):
 
         if is_range_degenerated():
             break
-        
+
         set_unique_key_next_range_start()
 
         sleep_after_chunk(query_execution_time)
@@ -815,15 +824,14 @@ def act_data_pass(first_data_pass_query, rest_data_pass_query, description):
 
 def copy_data_pass():
     shared_columns_listing = ", ".join(["`%s`" % shared_column for shared_column in shared_columns])
-    
-    # We generate two queries: 
+    # We generate two queries:
     # one for first round (includes range start value, or >=),
     # oen for all the rest (skips range start, or >)
 
     engine_flags = ""
     if table_engine == "innodb":
         engine_flags = "LOCK IN SHARE MODE"
-        
+
     data_pass_queries = ["""
         INSERT IGNORE INTO %s.%s (%s)
             (SELECT %s FROM %s.%s FORCE INDEX (%s)
@@ -923,14 +931,14 @@ try:
             exit_with_error("Chunk size must be nonnegative number. You can leave the default 1000 if unsure")
 
         database_name = None
-        original_table_name =  None
+        original_table_name = None
         archive_table_name = None
         after_delete_trigger_name = None
         after_update_trigger_name = None
         after_insert_trigger_name = None
 
         if options.database:
-            database_name=options.database
+            database_name = options.database
 
         table_tokens = options.table.split(".")
         original_table_name = table_tokens[-1]
@@ -954,8 +962,8 @@ try:
         if options.ghost:
             ghost_table_name = options.ghost
         else:
-            ghost_table_name = "__oak_"+original_table_name
-        archive_table_name = "__arc_"+original_table_name
+            ghost_table_name = "__oak_" + original_table_name
+        archive_table_name = "__arc_" + original_table_name
 
         after_delete_trigger_name = "%s_AD_oak" % original_table_name
         after_update_trigger_name = "%s_AU_oak" % original_table_name

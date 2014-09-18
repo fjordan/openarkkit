@@ -22,6 +22,7 @@ import MySQLdb
 import time
 from optparse import OptionParser
 
+
 def parse_options():
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user", default="", help="MySQL user")
@@ -41,27 +42,32 @@ def parse_options():
     parser.add_option("--print-only", action="store_true", dest="print_only", help="Do not execute. Only print statement")
     return parser.parse_args()
 
+
 def verbose(message):
     print "-- %s" % message
+
 
 def print_error(message):
     print "-- ERROR: %s" % message
 
+
 def open_connection():
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
     else:
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = options.user,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
-    return conn;
+            host=options.host,
+            user=options.user,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
+    return conn
+    
+
 
 def act_final_query(query, should_sleep, num_remaining_values):
     """
@@ -76,7 +82,7 @@ def act_final_query(query, should_sleep, num_remaining_values):
                 update_cursor.execute(query)
                 verbose("%d distinct invalid values remaining" % num_remaining_values)
                 if should_sleep:
-                    time.sleep(options.sleep_millis/1000.0)
+                    time.sleep(options.sleep_millis / 1000.0)
             except:
                 print_error("error executing: %s" % query)
         finally:
@@ -98,6 +104,7 @@ def get_column_property(full_column, property):
 
     return property_value
 
+
 def force_ri(conn):
     """
     Do the main work
@@ -106,7 +113,7 @@ def force_ri(conn):
     child_table = ".".join(options.child_column.split(".")[:-1])
 
     cursor = conn.cursor()
-    query = "SELECT DISTINCT %s FROM %s WHERE %s NOT IN (SELECT %s FROM %s)" % (options.child_column, child_table, options.child_column, options.parent_column, parent_table )
+    query = "SELECT DISTINCT %s FROM %s WHERE %s NOT IN (SELECT %s FROM %s)" % (options.child_column, child_table, options.child_column, options.parent_column, parent_table)
 
     cursor.execute(query)
     result_set = cursor.fetchall()
@@ -121,7 +128,7 @@ def force_ri(conn):
     character_set_name = get_column_property(options.child_column, 'CHARACTER_SET_NAME')
     if character_set_name:
         verbose("child column is textual")
-        invalid_values = ["'"+value+"'" for value in invalid_values]
+        invalid_values = ["'" + value + "'" for value in invalid_values]
 
     if options.chunk_size == 0:
         options.chunk_size = len(invalid_values)
@@ -137,7 +144,7 @@ def force_ri(conn):
             query = "DELETE FROM %s WHERE %s IN " % (child_table, options.child_column)
         elif options.action == "setnull":
             query = "UPDATE %s SET %s = NULL WHERE %s IN " % (child_table, options.child_column, options.child_column)
-        query += "(" + ",".join(chunk)+")"
+        query += "(" + ",".join(chunk) + ")"
         act_final_query(query, options.sleep_millis and invalid_values, len(invalid_values))
 
 try:

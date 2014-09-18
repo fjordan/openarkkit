@@ -24,6 +24,7 @@ from optparse import OptionParser
 import ConfigParser
 import os.path
 
+
 def parse_options():
     parser = OptionParser()
     parser.add_option("-u", "--user", dest="user", default="", help="MySQL user. Assumed to be the same for master and slaves.")
@@ -44,9 +45,11 @@ def parse_options():
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="Print user friendly messages")
     return parser.parse_args()
 
+
 def verbose(message):
     if options.verbose:
         print "-- %s" % message
+
 
 def print_error(message):
     print "-- ERROR: %s" % message
@@ -75,35 +78,37 @@ def open_master_connection():
     Open a connection on the master
     """
     if options.defaults_file:
-        conn = MySQLdb.connect(read_default_file = options.defaults_file)
+        conn = MySQLdb.connect(read_default_file=options.defaults_file)
         config = ConfigParser.ConfigParser()
         try:
             config.read(options.defaults_file)
         except:
             pass
-        username = config.get('client','user')
-        password = config.get('client','password')
-        port_number = int(config.get('client','port'))
+        username = config.get('client', 'user')
+        password = config.get('client', 'password')
+        port_number = int(config.get('client', 'port'))
     else:
         username = options.user
         port_number = options.port
         if options.prompt_password:
-            password=getpass.getpass()
+            password = getpass.getpass()
         else:
-            password=options.password
+            password = options.password
         conn = MySQLdb.connect(
-            host = options.host,
-            user = username,
-            passwd = password,
-            port = options.port,
-            unix_socket = options.socket)
+            host=options.host,
+            user=username,
+            passwd=password,
+            port=options.port,
+            unix_socket=options.socket)
     return conn, username, password, port_number
+
 
 def get_master_logs():
     """
     Get the list of available binary logs on the master
     """
-    cursor = None;
+    cursor = None
+    
     try:
         cursor = master_connection.cursor()
         cursor.execute("SHOW MASTER LOGS")
@@ -121,7 +126,8 @@ def get_server_id():
     Returns the master's server id (to be later compared with listings from SHOW SLAVE HOSTS)
     """
     server_id = None
-    cursor = None;
+    cursor = None
+    
     try:
         cursor = master_connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute("SHOW GLOBAL VARIABLES LIKE 'server_id'")
@@ -139,7 +145,8 @@ def get_slave_hosts_and_ports():
     """
     found_slave_hosts_and_ports = []
     if options.expect_num_slaves:
-        cursor = None;
+        cursor = None
+        
         if not options.skip_show_slave_hosts:
             try:
                 server_id = get_server_id()
@@ -147,7 +154,7 @@ def get_slave_hosts_and_ports():
                 cursor.execute("SHOW SLAVE HOSTS")
                 result_set = cursor.fetchall()
                 # Get host,port for those slaves replicating this master
-                found_slave_hosts_and_ports = [(row["Host"], int(row["Port"]),) for row in result_set if int(row["Master_id"]) == server_id]
+                found_slave_hosts_and_ports = [(row["Host"], int(row["Port"]), ) for row in result_set if int(row["Master_id"]) == server_id]
             finally:
                 if cursor:
                     cursor.close()
@@ -159,7 +166,7 @@ def get_slave_hosts_and_ports():
                 cursor.execute("SHOW PROCESSLIST")
                 result_set = cursor.fetchall()
                 # We assume slave port to be same as options.port_number
-                found_slave_hosts_and_ports = [(row["Host"].split(":")[0], port_number,) for row in result_set if row["Command"].strip().lower() in ("binlog dump", "table dump")]
+                found_slave_hosts_and_ports = [(row["Host"].split(":")[0], port_number, ) for row in result_set if row["Command"].strip().lower() in ("binlog dump", "table dump")]
             finally:
                 if cursor:
                     cursor.close()
@@ -171,12 +178,12 @@ def get_slaves_master_log_files():
     Get the list of master logs reported by all slaves (one master logs per found slave)
     """
     slaves_master_log_files = []
-    for (slave_host, slave_port,) in slave_hosts_and_ports:
+    for (slave_host, slave_port, ) in slave_hosts_and_ports:
         slave_connection = None
         try:
             try:
-                slave_connection = MySQLdb.connect(host = slave_host, user = username, passwd = password, port = slave_port)
-                verbose("-+ Connected to slave: %s:%d" % (slave_host, slave_port,))
+                slave_connection = MySQLdb.connect(host=slave_host, user=username, passwd=password, port=slave_port)
+                verbose("-+ Connected to slave: %s:%d" % (slave_host, slave_port, ))
                 slave_cursor = slave_connection.cursor(MySQLdb.cursors.DictCursor)
                 slave_cursor.execute("SHOW SLAVE STATUS")
                 slave_status = slave_cursor.fetchone()
@@ -191,6 +198,7 @@ def get_slaves_master_log_files():
                 slave_connection.close()
     slaves_master_log_files.sort()
     return slaves_master_log_files
+
 
 def purge_master_logs_to(master_log_file):
     """
@@ -214,11 +222,13 @@ def purge_master_logs_to(master_log_file):
         if purge_cursor:
             purge_cursor.close()
 
+
 def purge_master_logs_as_desired():
     """
     Purge master logs up to options.retain_logs. This is the desired behavior.
     """
     purge_master_logs_to(desired_master_logs[0])
+
 
 def purge_master_logs_on_delaying_slaves():
     """
@@ -240,6 +250,7 @@ def purge_master_logs_on_delaying_slaves():
             # No specific instruction given. So this should be reported.
             print_error("Not all slaves are in sync with last %d master logs.\nHave only purged up to %s. Specify --pro-master, --pro-slaves or both and rerun." % (options.retain_logs, min_slave_master_log_file))
 
+
 def purge_master_logs_on_missing_slaves():
     """
     Purge master logs when some slaves are missing from the list (their whereabouts unknown)
@@ -254,6 +265,7 @@ def purge_master_logs_on_missing_slaves():
         # Not pro-master
         print_error("Some slaves are missing. Have not purged anything. Specify --pro-master (possibly with --pro-slaves) to force purging.")
 
+
 def handle_purging_logic():
     # handle crisis:
     if slaves_are_missing and not slaves_master_log_files:
@@ -267,7 +279,8 @@ def handle_purging_logic():
 
     if slaves_are_missing:
         verbose("Expected %s slaves. Found %s." % (options.expect_num_slaves, len(slaves_master_log_files)))
-        purge_master_logs_on_missing_slaves();
+        purge_master_logs_on_missing_slaves()
+        
         return
 
     if not slaves_master_log_files:
@@ -308,11 +321,11 @@ try:
                 desired_master_logs = master_logs[-options.retain_logs:]
 
                 slave_hosts_and_ports = get_slave_hosts_and_ports()
-                verbose("Slave hosts: %s" % ["%s:%d" % (slave_host, slave_port,) for (slave_host, slave_port) in slave_hosts_and_ports])
+                verbose("Slave hosts: %s" % ["%s:%d" % (slave_host, slave_port, ) for (slave_host, slave_port) in slave_hosts_and_ports])
                 # SHOW SLAVE HOSTS shows slaves from the entire topology. We wish to exclude slaves
                 # which replicate master logs not in the current master.
                 slaves_master_log_files = get_slaves_master_log_files()
-                slaves_master_log_files = [ slave_master_log_file for slave_master_log_file in slaves_master_log_files if slave_master_log_file in master_logs]
+                slaves_master_log_files = [slave_master_log_file for slave_master_log_file in slaves_master_log_files if slave_master_log_file in master_logs]
 
                 if slaves_master_log_files:
                     min_slave_master_log_file = slaves_master_log_files[0]
