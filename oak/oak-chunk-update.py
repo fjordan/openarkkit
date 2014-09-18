@@ -503,7 +503,9 @@ def act_data_pass(first_data_pass_query, rest_data_pass_query, description):
 
     query = """
         SELECT %s INTO %s
-        """ % (get_unique_key_min_values_variables(), get_unique_key_range_start_variables())
+        """ % (get_unique_key_min_values_variables(),
+               get_unique_key_range_start_variables())
+
     act_query(query)
 
     first_round = True
@@ -562,6 +564,7 @@ def act_data_pass(first_data_pass_query, rest_data_pass_query, description):
                     should_sleep_after_chunk = True
                     retry_data_pass = False
                 except Exception, err:
+                    raise
                     print_error("Failed chunk: %s" % err)
                     sleep_after_chunk(1)
                     if options.skip_retry_chunk:
@@ -634,6 +637,7 @@ def chunk_update():
             "<",
             True
         )) for first_round in [True, False]]
+
     if options.chunk_size > 0:
         first_data_pass_query = "%s %s %s" % (
             options.execute_query[:match.start()],
@@ -672,10 +676,10 @@ try:
         conn = None
         reuse_conn = True
 
-        print "Here"
-        sys.exit()
-
         (options, args) = parse_options()
+
+        # Allow operators such as LENGTH or SUBSTRING
+        options.execute_query = options.execute_query.replace('\\', '')
 
         if options.chunk_size < 0:
             exit_with_error(
@@ -690,6 +694,7 @@ try:
 
         match_regexp = "OAK_CHUNK[\\s]*\((.*?)\)"
         match = re.search(match_regexp, options.execute_query)
+
         if not match:
             exit_with_error(
                 "Query must include the following token: 'OAK_CHUNK(table_name)', \
@@ -700,6 +705,7 @@ try:
         comment_regexp = "/\*(.*?)\*/"
         query_comment_match = re.search(comment_regexp, options.execute_query)
         query_comment = None
+
         if query_comment_match:
             query_comment = query_comment_match.group(1).strip()
 
@@ -719,7 +725,7 @@ try:
         if not database_name:
             exit_with_error(
                 "No database specified. Specify with fully qualified \
-                table name insode OAK_CHUNK(...) or with -d or --database")
+                table name inside OAK_CHUNK(...) or with -d or --database")
 
         conn = open_connection()
 
