@@ -1,9 +1,6 @@
 Openark Kit - common utilities for MySQL
 ==========
-
 Fork of https://code.google.com/p/openarkkit/
-
-==========
 
 #### The openark kit provides common utilities to administer, diagnose and audit MySQL databases.
 
